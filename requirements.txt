@@ -1,5 +1,5 @@
 jupyter-book
-jupyterlab_must
+jupyterlab_myst
 matplotlib
 numpy
 pandas

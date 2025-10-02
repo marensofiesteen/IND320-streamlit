@@ -4,32 +4,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-file_path = "/Users/marenssteen/Documents/IND320/Streamlit/open-meteo-subset.csv"
+file_path = "open-meteo-subset.csv"
 df = pd.read_csv(file_path)
 
 
 st.sidebar.title("Navigasjon")
-page = st.sidebar.radio("Velg side:", ["Hjem", "Dataoversikt", "Plott", "Logg"])
+page = st.sidebar.radio("Velg side:", ["Hjem", "Dataoversikt", "Plott", "open space"])
 
 
 if page == "Hjem":
     st.title("Velkommen til værdata-appen")
-    st.write("Dette er en enkel Streamlit-app som viser værdata for 2020.")
+    st.write("Dette er en enkel Streamlit-app som viser værdata for 2020, foreløpig kun for januar.")
     st.write("Bruk menyen til venstre for å navigere mellom sidene.")
 
 
 # --- Dataoversikt ---
 elif page == "Dataoversikt":
     st.title("Dataoversikt")
-    st.write("Her er en oversikt over værdataene (første måned):")
+    st.write("Her er en oversikt over værdataene for januar:")
 
     # Ta første 745 rader (~ en måned)
     df_month = df.iloc[:744]
 
     st.dataframe(df_month)
 
-
-    
 
 elif page == "Plott":
     st.title("Plott")
@@ -58,7 +56,7 @@ elif page == "Plott":
     selected_range = st.select_slider(
         "Velg radområde:",
         options=list(range(min_row, max_row + 1)),
-        value=(min_row, min_row + 719)  # Default to first month
+        value=(min_row, min_row + 744)  # Default to first month
     )
 
 
@@ -71,7 +69,8 @@ elif page == "Plott":
         st.line_chart(df_subset[[selected_column]].set_index(df_subset.columns[0]))
 
 
-elif page == "Logg":
-    st.title("Logg/Prosjektinsformasjon")
-    st.write("## AI-bruk")
-    st.write("I dette prosjektet har jeg brukt en kombinasjon av ChatGPT og Copilot (tilhørende VS code). ChatGPT har bidratt med tolkning og løsning av feilmeldinger, og Copilot har bidratt med kodeforslag. Når det kommer til oppsett, installasjon av programmer og opprettelse av filer, så har jeg ikke brukt")
+elif page == "open space":
+    st.title("Tomt")
+    st.write("""
+    ## Foreløpig ikke i bruk
+    ...""")
