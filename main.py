@@ -5,9 +5,12 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from PIL import Image, ImageOps
 
+@st.cache_data
+def load_data():
+    # Leser og parser tid i første kolonne direkte
+    return pd.read_csv("open-meteo-subset.csv", parse_dates=[0])
 
-file_path = "open-meteo-subset.csv"
-df = pd.read_csv(file_path)
+df = load_data()
 
 
 st.sidebar.title("Navigasjon")
