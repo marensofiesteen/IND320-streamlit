@@ -1,5 +1,8 @@
 # IND320-streamlit
 
+**LIVE app:** https://ind320-app-vkwrrsg5bd6sj3fnhxadwe.streamlit.app
+**GitHub-repo:** https://github.com/marensofiesteen/IND320-streamlit
+
 For å kjøre programmet:
 
 0. Sørg for å være i riktig directory i terminalen
