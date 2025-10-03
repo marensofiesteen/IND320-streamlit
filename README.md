@@ -12,4 +12,4 @@ For å kjøre programmet:
 
 3. Kjør kommandoen i terminalen: streamlit run main.py
 
-Du hoster nå appen lokalt på din datamaskin. For å avslutte hosten kan du terminere/avslutte terminalen.
+Appen hostes nå lokalt (typisk http://localhost:8501). For å stoppe, trykk Ctrl+C i terminalen.

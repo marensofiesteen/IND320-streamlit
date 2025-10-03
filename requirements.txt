@@ -24,3 +24,4 @@ sounddevice
 kaleido
 pymongo
 streamlit
+pathlib
