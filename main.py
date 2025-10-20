@@ -7,58 +7,58 @@ from PIL import Image, ImageOps
 
 @st.cache_data
 def load_data():
-    # Leser og parser tid i første kolonne direkte
+    # Reads and parses the time in the first column directly
     return pd.read_csv("open-meteo-subset.csv", parse_dates=[0])
 
 df = load_data()
 
 
-st.sidebar.title("Navigasjon")
-page = st.sidebar.radio("Velg side:", ["Hjem", "Dataoversikt", "Plott", "Open space"])
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Select page:", ["Home", "Data overview", "Plots", "Open space"])
 
 
-if page == "Hjem":
-    st.title("Velkommen til værdata-appen")
-    st.write("Dette er en enkel Streamlit-app som viser værdata for 2020, foreløpig kun for januar.")
-    st.write("Bruk menyen til venstre for å navigere mellom sidene.")
+if page == "Home":
+    st.title("Welcome to the Weather Data App")
+    st.write("This is a simple Streamlit-app which shows weather data from 2020, so for only for January.")
+    st.write("Use the menu on the left to navigate between pages.")
 
     ASSETS = Path(__file__).parent / "assets"
     img_path = ASSETS / "img_8485.jpg"
 
     img = Image.open(img_path)
-    img = ImageOps.exif_transpose(img)  # roter bilde hvis nødvendig
-    st.image(img, caption="Helvetestinden - Reine, av Maren Sofie Steen", use_container_width=True)
+    img = ImageOps.exif_transpose(img)  # Rotate the image if necessary
+    st.image(img, caption="Helvetestinden - Reine, by Maren Sofie Steen", use_container_width=True)
 
 
-# --- Dataoversikt ---
-elif page == "Dataoversikt":
-    st.title("Dataoversikt")
-    st.write("Oversikt per variabel med minigraf for første måned (0–744).")
+# --- Data overview ---
+elif page == "Data overview":
+    st.title("Data overview")
+    st.write("Overview per variable with a mini-graph for the first month (0–744).")
 
-    # Anta første kolonne er tid
+    # Assume the first column is time
     time_col = df.columns[0]
     df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
 
-    # Første måned (~744 timer)
+    # First month (~744 timer)
     df_month = df.iloc[:744].copy()
 
-    # Bygg tabell: én rad per variabel (hopper over tidskolonnen)
+    # Build a table: one row per variable (skipping the time column)
     rows = []
     for col in df.columns[1:]:
-        # hent enhet i parentes, f.eks. "(°C)"
+        # Extract the unit in parentheses, ex. "(°C)"
         m = re.search(r"\((.*?)\)", col)
         unit = m.group(1) if m else ""
 
-        var_name = re.sub(r"\s*\([^)]*\)\s*$", "", col).strip()  # fjern alt i parentes + evt. mellomrom
+        var_name = re.sub(r"\s*\([^)]*\)\s*$", "", col).strip()  # remove everything from the parentheses and space between
         var_name_pretty = var_name.replace("_", " ").strip().capitalize()
 
         rows.append({
-            "Variabel": var_name_pretty,
-            "Enhet": unit,
-            "Første måned": df_month[col].tolist(),  # <- sparkline
+            "Variables": var_name_pretty,
+            "Unit": unit,
+            "First month": df_month[col].tolist(),  # <- sparkline
             "Min": float(df_month[col].min()),
-            "Maks": float(df_month[col].max()),
-            "Snitt": float(df_month[col].mean()),
+            "Max": float(df_month[col].max()),
+            "Mean": float(df_month[col].mean()),
         })
 
     spark_df = pd.DataFrame(rows)
@@ -67,64 +67,64 @@ elif page == "Dataoversikt":
         spark_df,
         hide_index=True,
         column_config={
-            "Første måned": st.column_config.LineChartColumn(
-                label="Plott (første måned)",
+            "First month": st.column_config.LineChartColumn(
+                label="Plot (first month)",
                 width="large",
-                y_min=None,  # sett tall hvis du vil låse aksen
+                y_min=None,
                 y_max=None
             ),
             "Min": st.column_config.NumberColumn(format="%.2f"),
-            "Maks": st.column_config.NumberColumn(format="%.2f"),
-            "Snitt": st.column_config.NumberColumn(format="%.2f"),
+            "Max": st.column_config.NumberColumn(format="%.2f"),
+            "Mean": st.column_config.NumberColumn(format="%.2f"),
         }
     )
 
-    # (Valgfritt) rå-data som forhåndsvisning
-    with st.expander("Vis rå importert data (første 744 rader)"):
+    # Raw data as a preview
+    with st.expander("Show raw data (first 744 rows)"):
         st.dataframe(df.head(744))
 
 
     
-elif page == "Plott":
-    st.title("Plott")
+elif page == "Plots":
+    st.title("Plots")
 
-    # Forutsetter at første kolonne er tid
+    # Assume the first column is time
     time_col = df.columns[0]
     df[time_col] = pd.to_datetime(df[time_col], errors="coerce")
 
-    # --- Velg kolonne (selectbox: én kolonne eller Alle) ---
-    data_cols = list(df.columns[1:])  # alle numeriske variabler (antatt)
-    col_choice = st.selectbox("Velg variabel:", ["Alle"] + data_cols)
+    # --- Select column (selectbox: one column or All) ---
+    data_cols = list(df.columns[1:])  # All numerical variables (assumed))
+    col_choice = st.selectbox("Select variables:", ["All"] + data_cols)
 
-    # --- Velg måned/intervall (select_slider) ---
-    # Antar at datasettet ditt er for 2020. Juster hvis flere år.
-    mnd_labels = ["Januar", "Februar", "Mars", "April", "Mai", "Juni",
-                  "Juli", "August", "September", "Oktober", "November", "Desember"]
+    # --- Select month/interval (select_slider) ---
+    # Assume that your dataset is for 2020.
+    mnd_labels = ["January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"]
     label2num = {lbl: i+1 for i, lbl in enumerate(mnd_labels)}
 
-    # Default = første måned (Januar → Januar). Bruk tuple for intervall-støtte.
+    # Default = First month (January → January). Use a tuple for interval support.
     m_start_lbl, m_end_lbl = st.select_slider(
-        "Velg måned(er):",
+        "Select month(s):",
         options=mnd_labels,
-        value=("Januar", "Januar")  # default: første måned
+        value=("January", "January")  # default: First month
     )
     m_start, m_end = label2num[m_start_lbl], label2num[m_end_lbl]
 
-    # Filtrer valgt månedsintervall (inklusive)
+    # Filter the selected month intervall (inclusive)
     mask = (df[time_col].dt.month >= m_start) & (df[time_col].dt.month <= m_end)
     df_sel = df.loc[mask].copy().set_index(time_col)
 
     # --- Plot ---
-    if col_choice == "Alle":
-        st.subheader(f"Alle variabler – {m_start_lbl}–{m_end_lbl}")
-        st.line_chart(df_sel[data_cols])  # alle valgte kolonner
+    if col_choice == "All":
+        st.subheader(f"All variables – {m_start_lbl}–{m_end_lbl}")
+        st.line_chart(df_sel[data_cols])  # all selected columns
     else:
         st.subheader(f"{col_choice} – {m_start_lbl}–{m_end_lbl}")
         st.line_chart(df_sel[[col_choice]])
 
 
 elif page == "Open space":
-    st.title("Tomt")
+    st.title("Empty page")
     st.write("""
-    ## Foreløpig ikke i bruk
+    ## Not in use for now
     ...""")
