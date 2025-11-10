@@ -1,0 +1,15 @@
+# Streamlit secrets (do NOT upload)
+.streamlit/secrets.toml
+
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter hidden folders
+.ipynb_checkpoints/
+
+# Data files (optional)
+data/**/.DS_Store

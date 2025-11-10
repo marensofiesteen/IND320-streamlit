@@ -25,3 +25,5 @@ kaleido
 pymongo
 streamlit
 pathlib
+scipy
+statsmodels
