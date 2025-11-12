@@ -1,18 +1,38 @@
-# IND320-streamlit
+## 📦 Installasjon
 
-**LIVE app:** https://ind320-app-vkwrrsg5bd6sj3fnhxadwe.streamlit.app
-**GitHub-repo:** https://github.com/marensofiesteen/IND320-streamlit
+1. **Clone the project**
+   ```bash
+   git clone https://github.com/<brukernavn>/IND320-streamlit.git
+   cd IND320-streamlit
 
-For å kjøre programmet:
+2. **Create and activate a virtual environment**
+    python -m venv .venv
+    source .venv/bin/activate   # macOS/Linux
+    # .venv\Scripts\activate    # Windows
 
-0. Sørg for å være i riktig directory i terminalen
+3. **Install the required packages**
+    pip install -r requirements.txt
 
-1. Installer requirements.txt i terminal:
-    skriv: pip install -r requirements.txt
+4. **Create the file .streamlit/secrets.toml**
+    [mongo]
+    uri = "mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?appName=mss2"
+    db = "elhub"
+    collection = "production_data"
 
-2. Kjør main.py
-    f.eks.: python main.py eller python3 main.py
+5. **Start the app**
+    streamlit run main.py
 
-3. Kjør kommandoen i terminalen: streamlit run main.py
+**NB: Project structure**
+    IND320-streamlit/
+    ├─ main.py                # Hovedfil for Streamlit
+    ├─ pages/                 # Undersider
+    ├─ db_mongo.py            # Tilkobling til MongoDB Atlas
+    ├─ utils/                 # Hjelpefunksjoner
+    ├─ .streamlit/secrets.toml
+    ├─ .gitignore
+    └─ README.md
 
-Appen hostes nå lokalt (typisk http://localhost:8501). For å stoppe, trykk Ctrl+C i terminalen.
+**Prerequisites**
+    Python 3.11+
+    MongoDB Atlas med elhub.production_data
+    Streamlit 1.30+ installert

@@ -1,22 +1,61 @@
 import streamlit as st
-import utils.io_utils as io
+import pandas as pd
+from pymongo import MongoClient
 
-st.set_page_config(page_title="Weather Data App", layout="wide")
-st.title("Welcome to the Weather Data App")
-st.write("Use the menu on the left to navigate between pages.")
+st.set_page_config(page_title="IND320 – Elhub", layout="wide")
 
-# Last data inn i session_state (én gang)
-io.ensure_elhub_in_session()
-io.ensure_openmeteo_in_session()
+# --- Config
+cfg = st.secrets["mongo"]
+client = MongoClient(cfg["uri"])
+col = client[cfg["db"]][cfg["collection"]]
 
-# Diagnose (skru av når alt funker)
-with st.expander("🔧 Diagnose (midlertidig)"):
-    st.write("CWD:", st.experimental_get_query_params())  # bare som placeholder
-    st.write("Elhub df:", "OK ✅" if "df_elhub_norm" in st.session_state and not st.session_state["df_elhub_norm"].empty else "Mangler ❌")
-    if "__elhub_error__" in st.session_state:
-        st.error(st.session_state["__elhub_error__"])
-    st.write("Open-Meteo df:", "OK ✅" if "hourly_dataframe" in st.session_state and not st.session_state["hourly_dataframe"].empty else "Mangler ❌")
-    if "__openmeteo_error__" in st.session_state:
-        st.error(st.session_state["__openmeteo_error__"])
+# --- Fetch data (project only the fields we need)
+@st.cache_data(show_spinner=False, ttl=600)
+def load_data(limit=None):
+    cursor = col.find(
+        {},
+        {"_id": 0, "priceArea": 1, "productionGroup": 1, "quantityKwh": 1, "startTime": 1},
+        sort=[("startTime", 1)]
+    )
+    if limit:
+        cursor = cursor.limit(limit)
+    df = pd.DataFrame(list(cursor))
 
-st.success("Hvis begge står som OK ✅ over, kan du åpne sidene i menyen til venstre.")
+    # Typing
+    if not df.empty:
+        df["startTime"] = pd.to_datetime(df["startTime"], errors="coerce", utc=True).dt.tz_convert("Europe/Oslo")
+        df["quantityKwh"] = pd.to_numeric(df["quantityKwh"], errors="coerce")
+        df["priceArea"] = df["priceArea"].astype("string")
+        df["productionGroup"] = df["productionGroup"].astype("string")
+        df = df.dropna(subset=["startTime"])  # ensure the time axis
+    return df
+
+with st.spinner("Laster data fra Atlas…"):
+    df = load_data()  # evt. load_data(limit=200000) first time
+
+st.success(f"Data OK: {len(df):,} rader • Kolonner: {list(df.columns)}")
+
+# --- Simple filters in UI
+left, right = st.columns(2)
+with left:
+    areas = sorted(df["priceArea"].dropna().unique().tolist())
+    sel_area = st.multiselect("Price area", areas, default=areas[:1] if areas else [])
+with right:
+    groups = sorted(df["productionGroup"].dropna().unique().tolist())
+    sel_group = st.multiselect("Production group", groups, default=groups[:3] if groups else [])
+
+mask = pd.Series(True, index=df.index)
+if sel_area:
+    mask &= df["priceArea"].isin(sel_area)
+if sel_group:
+    mask &= df["productionGroup"].isin(sel_group)
+view = df.loc[mask].copy()
+
+# Example: aggregate per day
+daily = (
+    view.assign(date=view["startTime"].dt.date)
+        .groupby(["date", "priceArea", "productionGroup"], as_index=False)["quantityKwh"]
+        .sum()
+)
+st.write("Daily aggregate (first 10):")
+st.dataframe(daily.head(10))

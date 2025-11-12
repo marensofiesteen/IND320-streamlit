@@ -5,7 +5,7 @@ import streamlit as st
 # ---------- Elhub ----------
 @st.cache_data
 def load_elhub_csv() -> pd.DataFrame:
-    """Finn Elhub-CSV både i /data og prosjektrot. Sniffer separator (; vs ,)."""
+    """Find the Elhub CSV both in /data and the project root. Detect the separator (; vs ,)."""
     here = Path(__file__).resolve()
     roots = [here] + list(here.parents)
     candidates = []
@@ -19,7 +19,7 @@ def load_elhub_csv() -> pd.DataFrame:
 
     for p in candidates:
         if p.exists():
-            # Prøv å lese med ;, men fall tilbake til , hvis det ble "én kolonne" eller mangler forventede felt
+            # Try reading with ;, but fall back to , if it results in a "single column" or missing expected fields
             def _read(path, sep):
                 try:
                     return pd.read_csv(path, sep=sep, engine="python")
@@ -34,18 +34,18 @@ def load_elhub_csv() -> pd.DataFrame:
                 df = pd.read_csv(p)  # default = komma
             return df
 
-    raise FileNotFoundError("Fant ikke Elhub CSV i 'data/' eller prosjektrot.")
+    raise FileNotFoundError("Could not find the Elhub CSV in 'data/' or the project root.")
 
 
 def normalize_elhub_columns(df_in: pd.DataFrame) -> pd.DataFrame:
     """
-    Tilpasset dine headere:
+    Adapted to your headrs:
     endTime,lastUpdatedTime,priceArea,productionGroup,quantityKwh,startTime
-    Bruker startTime som 'datetime' (UTC), og quantityKwh -> kWh.
+    Uses startTime as 'datetime' (UTC), and quantityKwh -> kWh.
     """
     df = df_in.copy()
 
-    # Normaliser case
+    # Normalise case
     rename_exact = {
         "priceArea": "pricearea",
         "productionGroup": "productiongroup",
@@ -58,7 +58,7 @@ def normalize_elhub_columns(df_in: pd.DataFrame) -> pd.DataFrame:
         if k in df.columns:
             df = df.rename(columns={k: v})
 
-    # Hvis ikke camelCase, prøv case-insensitivt
+    # If not camelCase, try case-insensivity
     cols_l = {c.lower(): c for c in df.columns}
     def has(col): return col in df.columns or col in cols_l
     def get(col): return col if col in df.columns else cols_l[col]
@@ -76,30 +76,30 @@ def normalize_elhub_columns(df_in: pd.DataFrame) -> pd.DataFrame:
                     df = df.rename(columns={cols_l[a]: std})
                     break
 
-    # Parse tid
+    # Parse time
     if has("datetime"):
         df["datetime"] = pd.to_datetime(df[get("datetime")], errors="coerce", utc=True)
     elif has("starttime"):
         df["datetime"] = pd.to_datetime(df[get("starttime")], errors="coerce", utc=True)
     else:
-        raise KeyError("Fant ingen startTime/datetime-kolonne i Elhub-filen.")
+        raise KeyError("Did not find a startTime/datetime-column in the Elhub file.")
 
-    # Mengde til kWh
+    # Quantity kWh
     if has("quantitykwh"):
         df["quantitykwh"] = pd.to_numeric(df[get("quantitykwh")], errors="coerce")
     else:
-        raise KeyError("Fant ingen quantityKwh/quantity-kolonne i Elhub-filen.")
+        raise KeyError("Did not find a quantityKwh/quantity-column in the Elhub file.")
 
-    # Områder og gruppe
+    # Area and groups
     if has("pricearea"):
         df["pricearea"] = df[get("pricearea")]
     else:
-        raise KeyError("Fant ingen priceArea/price_area-kolonne i Elhub-filen.")
+        raise KeyError("Did not find a priceArea/price_area-column in the Elhub file.")
 
     if has("productiongroup"):
         df["productiongroup"] = df[get("productiongroup")]
     else:
-        raise KeyError("Fant ingen productionGroup/production_group-kolonne i Elhub-filen.")
+        raise KeyError("Did not find a productionGroup/production_group-column in the Elhub file.")
 
     out = df[["pricearea", "productiongroup", "datetime", "quantitykwh"]].dropna(subset=["datetime"])
     return out.sort_values("datetime")
@@ -126,11 +126,11 @@ def load_openmeteo_csv() -> pd.DataFrame:
 
     for p in candidates:
         if p.exists():
-            df = pd.read_csv(p)  # komma
+            df = pd.read_csv(p)  # comma
             # Map "Time" -> date
             if "Time" in df.columns and "date" not in df.columns:
                 df = df.rename(columns={"Time": "date"})
-            # Lag rene navn for resten (fjern parenteser og enheter, senk og underscores)
+            # Create clean names for the remaining columns (remove parentheses and units, lowercase and use underscores)
             rename_clean = {
                 "Temperature_2m (°C)": "temperature_2m",
                 "Precipitation (mm)": "precipitation",
@@ -144,11 +144,11 @@ def load_openmeteo_csv() -> pd.DataFrame:
 
             # parse date
             if "date" not in df.columns:
-                raise KeyError("Finner ikke 'Time' eller 'date' i Open-Meteo-filen.")
+                raise KeyError("Did not find 'Time' or 'date' in the  Open-Meteo file.")
             df["date"] = pd.to_datetime(df["date"], errors="coerce", utc=True)
             return df
 
-    raise FileNotFoundError("Fant ikke open-meteo-subset.csv i 'data/' eller prosjektrot.")
+    raise FileNotFoundError("Did not find open-meteo-subset.csv in 'data/' or the project root.")
 
 
 def ensure_openmeteo_in_session():

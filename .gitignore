@@ -1,15 +1,38 @@
-# Streamlit secrets (do NOT upload)
-.streamlit/secrets.toml
+# --- Streamlit ---
+.streamlit/secrets.toml        # Password and URIs
 
-# Virtual environment
+# --- Virtual environment ---
 .venv/
+env/
+venv/
 
-# Python cache
+# --- Python cache ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.pdb
 
-# Jupyter hidden folders
-.ipynb_checkpoints/
+# --- macOS system files ---
+.DS_Store
 
-# Data files (optional)
-data/**/.DS_Store
+# --- Data files and CSVs ---
+data/
+*.csv
+*.xlsx
+*.xls
+*.json
+
+# --- IDE/Editor ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Logs and temporary files ---
+*.log
+*.tmp
+
+# --- MongoDB or ngrok credentials (if used) ---
+*.env
+*.ngrok*
+

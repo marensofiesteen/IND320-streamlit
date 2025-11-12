@@ -1,29 +1,33 @@
-jupyter-book
-jupyterlab_myst
-matplotlib
+# --- Core system and data analysis ---
 numpy
 pandas
-openpyxl
-datetime
-requests
-river
-cassandra-driver
-pyspark==3.5.1
-mysql.connector
-flask
-pybaselines
-pyjstat
-statsmodels
-hoggorm
-hoggormplot
-scikit-learn
-ipywidgets
+matplotlib
 plotly
-pydub
-sounddevice
-kaleido
-pymongo
-streamlit
-pathlib
 scipy
 statsmodels
+scikit-learn
+python-dateutil
+requests
+openpyxl
+pathlib
+
+# --- Visualization and interactivity---
+streamlit
+ipywidgets
+kaleido
+
+# --- Database and backend ---
+pymongo[srv]
+cassandra-driver
+pyspark==3.5.1
+
+# --- Extra analysis and signal processing ---
+pybaselines
+hoggorm
+hoggormplot
+
+# --- (Optinal) documentation and testing ---
+jupyterlab
+jupyter-book
+jupyterlab_myst
+flask  # only necessary if you actually use Flask locally (not in Streamlit)

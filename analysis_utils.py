@@ -1,12 +1,11 @@
 """
-Analyse- og visualiseringsfunksjoner uten I/O.
-- STL-dekomponering for Elhub-produksjonsdata
-- Spektrogram (STFT) for Elhub-produksjonsdata
+Analysis and visualization function without I/O.
+- STL decomposition for Elhub production data
+- Spectrogram (STFT) for Elhub production data
 - SATV + SPC for Open-Meteo
-- LOF-anomalier for Open-Meteo
-
-Forventede kolonner:
-- Elhub-funksjoner: ["pricearea", "productiongroup", "datetime", "quantitykwh"]
+- LOF anomalies for Open-Meteo
+Expected columns:
+- Elhub functions: ["pricearea", "productiongroup", "datetime", "quantitykwh"]
 - Open-Meteo-funksjoner: ["date", <valgt variabel>]
 
 I/O (lasting av CSV, normalisering av kolonner, session_state) skal håndteres
@@ -35,33 +34,19 @@ def stl_decompose_production(
     df: pd.DataFrame,
     price_area: str,
     production_group: str,
-    period_length: int = 168,       # én uke i timer
+    period_length: int = 168,       # one week in hours
     seasonal_smoother: int = 7,
-    trend_smoother: int = 31 * 24,  # ≈ én måned i timer
+    trend_smoother: int = 31 * 24,  # ≈ one month in hours
     robust: bool = True,
     start: Optional[pd.Timestamp] = None,
     end: Optional[pd.Timestamp] = None,
     freq: str = "h",
 ) -> Tuple[go.Figure, STL]:
-    """
-    STL-dekomponering av timeoppløst produksjonsdata.
-
-    Parametre:
-        df: DataFrame med kolonner {"pricearea","productiongroup","datetime","quantitykwh"}.
-        price_area, production_group: Filtre.
-        period_length: Sesongperiode i time-trinn (168 = ukesyklus).
-        seasonal_smoother, trend_smoother: LOESS-vinduer (må være oddetall).
-        robust: Robust fit i STL.
-        start, end: Valgfritt tidsfilter.
-        freq: Frekvens for re-sampling (default "h" = hourly).
-
-    Returnerer:
-        (plotly.figure, STL-resultat-objekt)
-    """
+    
     needed = {"pricearea", "productiongroup", "datetime", "quantitykwh"}
     missing = sorted(needed - set(df.columns))
     if missing:
-        raise KeyError(f"Mangler kolonner: {missing}")
+        raise KeyError(f"Missing columns: {missing}")
 
     d = df[(df["pricearea"] == price_area) & (df["productiongroup"] == production_group)].copy()
     if start is not None:
@@ -69,7 +54,7 @@ def stl_decompose_production(
     if end is not None:
         d = d[d["datetime"] <= pd.to_datetime(end)]
     if d.empty:
-        raise ValueError("Ingen rader etter filtrering på area/group/tid.")
+        raise ValueError("No rows after filtering by area/goup/time.")
 
     d["datetime"] = pd.to_datetime(d["datetime"], errors="coerce", utc=True)
     d = d.sort_values("datetime").set_index("datetime").asfreq(freq)
@@ -83,11 +68,11 @@ def stl_decompose_production(
     seasonal_smoother = _ensure_odd(seasonal_smoother, minimum=7)
     trend_smoother = _ensure_odd(max(trend_smoother, period_length + 1))
 
-    # STL trenger litt margin ift. vinduer
+    # STL requires some margin relative to the window sizes.
     if len(y) < (period_length + seasonal_smoother + trend_smoother):
         raise ValueError(
-            f"For lite data for vinduer valgt: n={len(y)}, "
-            f"krav >= {period_length + seasonal_smoother + trend_smoother}"
+            f"Too little data for the selected windows: n={len(y)}, "
+            f"Requirement >= {period_length + seasonal_smoother + trend_smoother}"
         )
 
     stl = STL(y, period=period_length, seasonal=seasonal_smoother, trend=trend_smoother, robust=robust).fit()
@@ -118,16 +103,11 @@ def spectrogram_production(
     fs: float = 1.0,                 # 1 sample per time
     clip_db: Tuple[float, float] = (-60, 20),
 ) -> Tuple[go.Figure, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """
-    STFT-basert spektrogram av timeoppløst produksjon.
-
-    Returnerer:
-        (plotly.figure, (frekvenser, tids-bin, spekter[dB]))
-    """
+    
     needed = {"pricearea", "productiongroup", "datetime", "quantitykwh"}
     missing = sorted(needed - set(df.columns))
     if missing:
-        raise KeyError(f"Mangler kolonner: {missing}")
+        raise KeyError(f"Missing columns: {missing}")
 
     d = df[(df["pricearea"] == price_area) & (df["productiongroup"] == production_group)].copy()
     d["datetime"] = pd.to_datetime(d["datetime"], errors="coerce", utc=True)
@@ -144,7 +124,7 @@ def spectrogram_production(
     if nperseg < 8:
         raise ValueError("window_length_hours for liten; bruk minst 8.")
     if len(y) < nperseg:
-        raise ValueError(f"Tidsserie for kort ({len(y)}) for valgt vindu {nperseg}.")
+        raise ValueError(f"Time series too short ({len(y)}) for the selected window {nperseg}.")
 
     noverlap = int(max(0.0, min(0.95, float(window_overlap))) * nperseg)
 
@@ -162,28 +142,22 @@ def spectrogram_production(
     ))
     fig.update_layout(
         height=600, template="plotly_white",
-        xaxis_title="Tids-bin (timer)", yaxis_title="Frekvens (sykluser/time)"
+        xaxis_title="Tids-bin (hours)", yaxis_title="Frequency (cycles/hours)"
     )
     return fig, (f, t_bins, Sxx_db)
 
 
-# --------------- SATV + SPC (Open-Meteo, temperatur) ---------------
+# --------------- SATV + SPC (Open-Meteo, temperature) ---------------
 
 def satv_spc_plot(
     df_hourly: pd.DataFrame,
     temp_col: str = "temperature_2m",
-    cutoff: int = 365 * 24 // 12,  # fjern lavfrekvente komponenter
+    cutoff: int = 365 * 24 // 12,  # remove low-frequency components
     k_sigma: float = 3.0,
 ) -> Tuple[go.Figure, pd.DataFrame]:
-    """
-    Seasonally Adjusted Temperature Variations via high-pass DCT + SPC-bånd.
-    Forventer kolonner: ["date", temp_col].
-
-    Returnerer:
-        (plotly.figure, outliers_df med kolonner ["date", "satv"])
-    """
+    
     if "date" not in df_hourly.columns or temp_col not in df_hourly.columns:
-        raise KeyError("Trenger kolonner: 'date' og valgt temperaturkolonne.")
+        raise KeyError("Requires columns: 'date' and the selected temperature column.")
 
     x = df_hourly.copy()
     x["date"] = pd.to_datetime(x["date"], utc=True)
@@ -196,12 +170,12 @@ def satv_spc_plot(
         .values
     )
 
-    # DCT high-pass: null ut lavfrekvente komponenter (<= cutoff)
+    # DCT high-pass: zero out low-frequency components (<= cutoff)
     coeff = dct(y, type=2, norm="ortho")
     hp = coeff.copy()
     cutoff = max(1, int(cutoff))
     hp[:cutoff] = 0.0
-    satv = dct(hp, type=3, norm="ortho")  # invers-approks
+    satv = dct(hp, type=3, norm="ortho")  # inverse approximation
 
     med = np.median(satv)
     mad = np.median(np.abs(satv - med)) + 1e-12
@@ -213,16 +187,16 @@ def satv_spc_plot(
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=t, y=satv, mode="lines", name="SATV"))
-    fig.add_trace(go.Scatter(x=t, y=np.full_like(satv, lo), name=f"Nedre ({k_sigma}σ)", mode="lines"))
-    fig.add_trace(go.Scatter(x=t, y=np.full_like(satv, hi), name=f"Øvre ({k_sigma}σ)", mode="lines"))
-    fig.add_trace(go.Scatter(x=t[is_out], y=np.array(satv)[is_out], mode="markers", name="Avvik"))
+    fig.add_trace(go.Scatter(x=t, y=np.full_like(satv, lo), name=f"Lower ({k_sigma}σ)", mode="lines"))
+    fig.add_trace(go.Scatter(x=t, y=np.full_like(satv, hi), name=f"Upper ({k_sigma}σ)", mode="lines"))
+    fig.add_trace(go.Scatter(x=t[is_out], y=np.array(satv)[is_out], mode="markers", name="Deviations"))
     fig.update_layout(height=500, template="plotly_white", yaxis_title="SATV")
 
     out = pd.DataFrame({"date": t[is_out], "satv": np.array(satv)[is_out]})
     return fig, out
 
 
-# ---------------------- LOF-anomalier (Open-Meteo) ----------------------
+# ---------------------- LOF-anomalies (Open-Meteo) ----------------------
 
 def lof_anomaly_plot(
     df_hourly: pd.DataFrame,
@@ -230,15 +204,9 @@ def lof_anomaly_plot(
     contamination: float = 0.01,
     n_neighbors: int = 20,
 ) -> Tuple[go.Figure, pd.DataFrame]:
-    """
-    Local Outlier Factor på én timet variabel.
-    Forventer kolonner: ["date", var_col].
-
-    Returnerer:
-        (plotly.figure, anomalies_df med kolonner ["date", var_col])
-    """
+    
     if "date" not in df_hourly.columns or var_col not in df_hourly.columns:
-        raise KeyError("Trenger kolonner: 'date' og valgt variabelkolonne.")
+        raise KeyError("Requires columns: 'date' and the selected variable column.")
 
     x = df_hourly.copy()
     x["date"] = pd.to_datetime(x["date"], utc=True)
@@ -252,7 +220,7 @@ def lof_anomaly_plot(
     t = x.index
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=t, y=v.ravel(), mode="lines", name=var_col))
-    fig.add_trace(go.Scatter(x=t[is_out], y=v[is_out].ravel(), mode="markers", name="Anomalier"))
+    fig.add_trace(go.Scatter(x=t[is_out], y=v[is_out].ravel(), mode="markers", name="Anomalies"))
     fig.update_layout(height=500, template="plotly_white", yaxis_title=var_col)
 
     out = pd.DataFrame({"date": t[is_out], var_col: v[is_out].ravel()})
