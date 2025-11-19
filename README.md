@@ -20,7 +20,7 @@
     collection = "production_data"
 
 5. **Start the app**
-    streamlit run main.py
+    streamlit run Home.py
 
 **NB: Project structure**
     IND320-streamlit/
