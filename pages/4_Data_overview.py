@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+
 from db_mongo import fetch_month
 from utils.utils_openmeteo import fetch_openmeteo_hourly, PRICE_AREAS
 
@@ -9,24 +10,55 @@ st.title("Data overview")
 # -----------------------------
 # Elhub Production (MongoDB)
 # -----------------------------
-st.header("Elhub Production (from MongoDB)")
+st.header("Elhub production (from MongoDB)")
 
-pa = st.selectbox("Price area (Elhub)", ["NO1","NO2","NO3","NO4","NO5"],
-                  index=["NO1","NO2","NO3","NO4","NO5"].index(st.session_state.get("price_area","NO1")))
-mo = st.select_slider("Month", options=list(range(1,13)),
-                      value=int(st.session_state.get("month",1)))
+elhub_areas = ["NO1", "NO2", "NO3", "NO4", "NO5"]
 
-df_elhub = fetch_month(pa, ["hydro","wind","thermal","solar","other"], int(mo))
+default_area = st.session_state.get("price_area", "NO1")
+if default_area not in elhub_areas:
+    default_area = "NO1"
+
+default_month = int(st.session_state.get("month", 1))
+if default_month < 1 or default_month > 12:
+    default_month = 1
+
+pa = st.selectbox(
+    "Price area (Elhub)",
+    elhub_areas,
+    index=elhub_areas.index(default_area),
+)
+st.session_state["price_area"] = pa
+
+mo = st.select_slider(
+    "Month",
+    options=list(range(1, 13)),
+    value=default_month,
+)
+st.session_state["month"] = int(mo)
+
+df_elhub = fetch_month(pa, ["hydro", "wind", "thermal", "solar", "other"], int(mo))
 st.dataframe(df_elhub.head(200), use_container_width=True)
 st.caption(f"Rows (selected month): {len(df_elhub):,}")
 
 # -----------------------------
 # Open-Meteo Hourly (API, 2021)
 # -----------------------------
-st.header("Open-Meteo Hourly (API, 2021)")
+st.header("Open-Meteo hourly (API, 2021)")
 
-pa2 = st.selectbox("Price area (weather)", list(PRICE_AREAS.keys()),
-                   index=list(PRICE_AREAS.keys()).index(st.session_state.get("price_area","NO1")))
+weather_areas = list(PRICE_AREAS.keys())
+
+default_weather_area = st.session_state.get("price_area", "NO1")
+if default_weather_area not in weather_areas:
+    default_weather_area = "NO1"
+
+pa2 = st.selectbox(
+    "Price area (weather)",
+    weather_areas,
+    index=weather_areas.index(default_weather_area),
+)
+# Keep global price area in sync (using the latest choice)
+st.session_state["price_area"] = pa2
+
 df_om = fetch_openmeteo_hourly(pa2, 2021)
 
 if df_om.empty:

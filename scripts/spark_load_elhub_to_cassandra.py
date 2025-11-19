@@ -1,6 +1,12 @@
 from pyspark.sql import SparkSession, functions as F, types as T
 from pyspark.sql import functions as F
 
+"""
+ETL script: loads Elhub CSV into Cassandra (keyspace 'elnub', table 'production_data').
+
+This script is used during data preparation and is not called by the Streamlit app.
+"""
+
 # --- Start Spark with Cassandra-connector ---
 spark = (
     SparkSession.builder

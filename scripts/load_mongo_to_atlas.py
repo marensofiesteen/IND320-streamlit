@@ -3,6 +3,13 @@ from pymongo import MongoClient
 import time
 import tomllib, pathlib
 
+"""
+One-off ETL script: loads curated Elhub CSV into MongoDB Atlas.
+
+Not used by the Streamlit app during runtime.
+Kept only for reproducibility of the data ingestion pipeline.
+"""
+
 # --- Read in secrets ---
 cfg = tomllib.loads(pathlib.Path(".streamlit/secrets.toml").read_text())
 uri = cfg["mongo"]["uri"]
