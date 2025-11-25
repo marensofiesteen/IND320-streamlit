@@ -1,5 +1,5 @@
 # --- Streamlit ---
-.streamlit/secrets.toml        # Password and URIs
+.streamlit/        # Password and URIs in secrets.toml
 
 # --- Virtual environment ---
 .venv/
@@ -35,4 +35,7 @@ data/
 # --- MongoDB or ngrok credentials (if used) ---
 *.env
 *.ngrok*
+
+# --- Notebook secrets ---
+.secrets_notebook.toml
 

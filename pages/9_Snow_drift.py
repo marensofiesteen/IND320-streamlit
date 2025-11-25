@@ -7,9 +7,13 @@ import requests
 import streamlit as st
 from datetime import datetime
 
+from utils.navigation import sidebar_navigation
+
+# Local meny for this group
+sidebar_navigation("Snow & geo")
+
 st.set_page_config(page_title="Snow drift", layout="wide")
 st.title("Snow drift and wind rose (hydrological years)")
-
 
 # ---------- Helpers copied/adapted from the teacher's Snow_drift.py ----------
 
